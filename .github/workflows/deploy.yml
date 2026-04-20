@@ -1,0 +1,26 @@
+name: Deploy Story Website
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # GitHub Runners có sẵn PowerShell 7 (pwsh)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run PowerShell Build
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages

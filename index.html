@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marquis House Reader</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="light">
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h3>Mục lục</h3>
+            <button class="icon-btn" onclick="toggleSidebar()">✕</button>
+        </div>
+        <div id="chapter-list" class="chapter-list">
+            </div>
+    </aside>
+
+    <main id="main-view">
+        <div class="top-bar">
+            <button class="menu-btn" onclick="toggleSidebar()">☰ Menu</button>
+            <div class="nav-group">
+                <button id="prevBtn" onclick="prevChapter()">← Trước</button>
+                <button id="nextBtn" onclick="nextChapter()">Sau →</button>
+            </div>
+            <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        </div>
+        
+        <div id="content-area">
+            <article class="reader-box">
+                <h2 id="chapter-title">Đang tải...</h2>
+                <div class="meta-info" id="current-path"></div>
+                <hr>
+                <pre id="viewer"></pre>
+            </article>
+        </div>
+    </main>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

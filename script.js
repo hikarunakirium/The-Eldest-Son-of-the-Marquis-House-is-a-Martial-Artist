@@ -1,62 +1,59 @@
-let maxLoadedIndex = -1; // Đánh dấu chương xa nhất đã load trong DOM
-let isFetching = false;  // Tránh load đè nhiều lần
-let observer; // Dùng để soi xem người dùng đang đọc chương nào
+let maxLoadedIndex = -1;
+let isFetching = false;
+let observer;
+let currentReadingIndex = 0; // Theo dõi chương đang hiển thị trên màn hình
+let savedBookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]'); // Mảng chứa các ID đã bookmark
 
 window.onload = () => {
     renderSidebar();
-    loadSettings(); // Tải cài đặt người dùng đã lưu
+    renderBookmarks();
+    loadSettings();
     
     if (window.matchMedia('(prefers-color-scheme: dark)').matches && !localStorage.getItem('theme')) {
         document.body.setAttribute('data-theme', 'dark');
     }
 
-    // Thiết lập tính năng theo dõi chương đang hiển thị trên màn hình
     observer = new IntersectionObserver(handleIntersection, {
         root: document.getElementById('content-area'),
         rootMargin: '0px',
-        threshold: 0.1 // 10% của chương xuất hiện là tính
+        threshold: 0.1
     });
 
-    // Lắng nghe sự kiện cuộn để vô hạn scroll
     document.getElementById('content-area').addEventListener('scroll', checkInfiniteScroll);
 
+    // TỰ ĐỘNG TẢI TIẾN TRÌNH: Kiểm tra xem lần trước đọc đến đâu
+    const lastRead = localStorage.getItem('lastRead');
     if (typeof allChapters !== 'undefined' && allChapters.length > 0) {
-        loadChapterStartFresh(0); // Mở web là load luôn chương đầu
+        if (lastRead !== null && allChapters.length > parseInt(lastRead)) {
+            loadChapterStartFresh(parseInt(lastRead));
+        } else {
+            loadChapterStartFresh(0);
+        }
     }
 };
 
-/* =========================================
-   1. QUẢN LÝ CÀI ĐẶT (SETTINGS)
-========================================= */
+/* ================= CÀI ĐẶT & GIAO DIỆN ================= */
 function loadSettings() {
     const theme = localStorage.getItem('theme');
     if (theme) document.body.setAttribute('data-theme', theme);
-
     const fFamily = localStorage.getItem('r-font') || "'Times New Roman', serif";
     const fSize = localStorage.getItem('r-size') || "21";
     const fLine = localStorage.getItem('r-line') || "1.8";
-
     document.getElementById('fontFamily').value = fFamily;
     document.getElementById('fontSize').value = fSize;
     document.getElementById('lineHeight').value = fLine;
-
-    applySettings(false); // Áp dụng ngay mà không cần lưu lại
+    applySettings(false);
 }
 
 function applySettings(save = true) {
     const fFamily = document.getElementById('fontFamily').value;
     const fSize = document.getElementById('fontSize').value;
     const fLine = document.getElementById('lineHeight').value;
-
-    // Cập nhật số hiển thị
     document.getElementById('fontSizeVal').innerText = fSize;
     document.getElementById('lineHeightVal').innerText = fLine;
-
-    // Đẩy vào CSS Variables toàn cục
     document.documentElement.style.setProperty('--r-font', fFamily);
     document.documentElement.style.setProperty('--r-size', fSize + 'px');
     document.documentElement.style.setProperty('--r-line', fLine);
-
     if (save) {
         localStorage.setItem('r-font', fFamily);
         localStorage.setItem('r-size', fSize);
@@ -71,25 +68,15 @@ function toggleTheme() {
     localStorage.setItem('theme', isDark ? 'light' : 'dark');
 }
 
-/* =========================================
-   2. LOGIC TẢI TRUYỆN & VÔ HẠN SCROLL
-========================================= */
-
-// Gọi khi bấm từ mục lục (Xóa hết cũ, tải lại một chương)
+/* ================= LOGIC ĐỌC TRUYỆN (INFINITE SCROLL & AUTO-SAVE) ================= */
 async function loadChapterStartFresh(idx) {
     if (idx < 0 || idx >= allChapters.length) return;
-    
-    // Đóng sidebar nếu đang ở Mobile
     closeAllPanels();
-
-    const container = document.getElementById('reader-container');
-    container.innerHTML = ""; // Xóa bảng trắng
-    maxLoadedIndex = idx - 1; // Reset mốc
-
+    document.getElementById('reader-container').innerHTML = "";
+    maxLoadedIndex = idx - 1;
     await fetchAndAppendChapter(idx);
 }
 
-// Hàm nòng cốt: Tải text và gắn thêm (append) vào đuôi
 async function fetchAndAppendChapter(idx) {
     if (idx >= allChapters.length || isFetching) return;
     isFetching = true;
@@ -101,29 +88,22 @@ async function fetchAndAppendChapter(idx) {
     try {
         const resp = await fetch(path);
         const text = await resp.text();
-
-        // Tạo cục DOM mới cho chương này
         const box = document.createElement('div');
         box.className = 'chapter-box';
-        box.setAttribute('data-idx', idx); // Gắn tem số thứ tự cho Observer
+        box.setAttribute('data-idx', idx);
         box.innerHTML = `<h2>${title}</h2><pre class="chapter-content">${text}</pre>`;
-
         document.getElementById('reader-container').appendChild(box);
-        observer.observe(box); // Cho vào tầm ngắm để đổi link Menu
-
+        observer.observe(box);
         maxLoadedIndex = idx;
     } catch (e) {
         console.error("Lỗi khi load chương:", e);
     }
-
     document.getElementById('loading-spinner').style.display = 'none';
     isFetching = false;
 }
 
-// Bắt sự kiện cuộn xuống sát đáy
 function checkInfiniteScroll() {
     const area = document.getElementById('content-area');
-    // Khi cuộn còn cách đáy 800px thì tự gọi chương tiếp theo
     if (area.scrollHeight - area.scrollTop - area.clientHeight < 800) {
         if (!isFetching && maxLoadedIndex < allChapters.length - 1) {
             fetchAndAppendChapter(maxLoadedIndex + 1);
@@ -131,20 +111,104 @@ function checkInfiniteScroll() {
     }
 }
 
-// Cập nhật thanh Menu Trái khi người dùng đang cuộn qua các chương
+// Cập nhật vị trí đang đọc và TỰ ĐỘNG LƯU
 function handleIntersection(entries) {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
-            const visibleIdx = entry.target.getAttribute('data-idx');
+            const visibleIdx = parseInt(entry.target.getAttribute('data-idx'));
+            currentReadingIndex = visibleIdx;
+            
+            // AUTO-SAVE: Lưu chương đang đọc vào LocalStorage
+            localStorage.setItem('lastRead', visibleIdx); 
+
             document.querySelectorAll('.chapter-link').forEach(el => el.classList.remove('active'));
             document.getElementById('link-idx-' + visibleIdx)?.classList.add('active');
+            document.getElementById('bm-link-idx-' + visibleIdx)?.classList.add('active'); // Active cho cả nhánh Bookmark
         }
     });
 }
 
-/* =========================================
-   3. GIAO DIỆN CHUNG & MENU
-========================================= */
+/* ================= BOOKMARK ================= */
+function addBookmark() {
+    if (!savedBookmarks.includes(currentReadingIndex)) {
+        savedBookmarks.push(currentReadingIndex);
+        localStorage.setItem('bookmarks', JSON.stringify(savedBookmarks));
+        renderBookmarks();
+        alert("🔖 Đã thêm chương hiện tại vào Bookmark!");
+    } else {
+        alert("Chương này đã có trong Bookmark rồi.");
+    }
+}
+
+function removeBookmark(event, idx) {
+    event.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+    savedBookmarks = savedBookmarks.filter(id => id !== idx);
+    localStorage.setItem('bookmarks', JSON.stringify(savedBookmarks));
+    renderBookmarks();
+}
+
+function renderBookmarks() {
+    const list = document.getElementById('bookmark-list');
+    if(savedBookmarks.length === 0) {
+        list.innerHTML = "<div style='font-size:13px; color:gray;'>Chưa có bookmark nào. Hãy bấm 'Đánh dấu' khi đang đọc!</div>";
+        return;
+    }
+    let html = "";
+    savedBookmarks.forEach(idx => {
+        const path = allChapters[idx];
+        if(!path) return;
+        const title = path.split('/').pop().replace('.txt', '');
+        html += `<div style="display:flex; align-items:center; gap:5px; margin-bottom:4px;">
+            <a class="chapter-link" id="bm-link-idx-${idx}" style="flex:1; margin:0; font-size:14px;" onclick="loadChapterStartFresh(${idx})">🔖 ${title}</a>
+            <button onclick="removeBookmark(event, ${idx})" style="padding:6px 10px; border:none; background:var(--bg); color:red; border-radius:4px;">✕</button>
+        </div>`;
+    });
+    list.innerHTML = html;
+}
+
+/* ================= XUẤT/NHẬP DỮ LIỆU (BACKUP) ================= */
+function exportData() {
+    const data = {
+        lastRead: localStorage.getItem('lastRead'),
+        bookmarks: localStorage.getItem('bookmarks'),
+        theme: localStorage.getItem('theme'),
+        'r-font': localStorage.getItem('r-font'),
+        'r-size': localStorage.getItem('r-size'),
+        'r-line': localStorage.getItem('r-line')
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Marquis-Reader-Backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.lastRead !== undefined) localStorage.setItem('lastRead', data.lastRead);
+            if (data.bookmarks !== undefined) localStorage.setItem('bookmarks', data.bookmarks);
+            if (data.theme !== undefined) localStorage.setItem('theme', data.theme);
+            if (data['r-font'] !== undefined) localStorage.setItem('r-font', data['r-font']);
+            if (data['r-size'] !== undefined) localStorage.setItem('r-size', data['r-size']);
+            if (data['r-line'] !== undefined) localStorage.setItem('r-line', data['r-line']);
+            
+            alert("✅ Phục hồi dữ liệu thành công! Trang web sẽ được tải lại.");
+            location.reload();
+        } catch (err) {
+            alert("❌ Lỗi: File dữ liệu không hợp lệ.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+/* ================= HÀM BỔ TRỢ ================= */
 function renderSidebar() {
     const list = document.getElementById('chapter-list');
     let html = "";
@@ -153,7 +217,6 @@ function renderSidebar() {
             html += `<div style="font-weight:800; padding:15px 10px 5px; font-size:12px; color:var(--primary); text-transform:uppercase;">${item.name}</div>`;
         } else {
             const idx = allChapters.indexOf(item.path);
-            // Click mục lục sẽ gọi hàm xóa màn hình (Start Fresh)
             html += `<a class="chapter-link" id="link-idx-${idx}" onclick="loadChapterStartFresh(${idx})">${item.name}</a>`;
         }
     });
@@ -165,19 +228,16 @@ function toggleSidebar() {
     document.getElementById('settings-panel').classList.remove('open');
     checkOverlay();
 }
-
 function toggleSettings() { 
     document.getElementById('settings-panel').classList.toggle('open');
     document.getElementById('sidebar').classList.remove('open');
     checkOverlay();
 }
-
 function closeAllPanels() {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('settings-panel').classList.remove('open');
     document.getElementById('overlay').classList.remove('show');
 }
-
 function checkOverlay() {
     const isAnyOpen = document.getElementById('sidebar').classList.contains('open') || 
                       document.getElementById('settings-panel').classList.contains('open');

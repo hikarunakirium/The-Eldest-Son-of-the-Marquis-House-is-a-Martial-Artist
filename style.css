@@ -1,98 +1,69 @@
 :root {
-    --bg: #f5f6fa; --card: #ffffff; --text: #2f3640; --border: #dcdde1; --primary: #0097e6;
+    --bg: #f8f9fa; --card: #ffffff; --text: #212529; --border: #dee2e6; --primary: #007bff;
 }
 [data-theme="dark"] {
-    --bg: #181b22; --card: #22272e; --text: #e1e4e8; --border: #444c56; --primary: #539bf5;
+    --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --border: #333333; --primary: #375a7f;
 }
 
 * { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
 
-body { 
-    margin: 0; display: flex; height: 100vh; width: 100vw;
-    font-family: system-ui, -apple-system, sans-serif; 
-    background: var(--bg); color: var(--text); overflow: hidden; 
-}
-
-/* Sidebar dùng % bề ngang */
+/* Sidebar: Bay lơ lửng, không chiếm chỗ */
 #sidebar { 
-    width: 20%; 
-    min-width: 280px; /* Đảm bảo không bị quá hẹp trên màn hình nhỏ */
-    max-width: 400px; /* Đảm bảo không bị quá to trên màn hình siêu rộng */
-    flex-shrink: 0; 
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 320px; max-width: 80%;
     background: var(--card); 
     border-right: 1px solid var(--border); 
-    display: flex; 
-    flex-direction: column; 
-    transition: all 0.3s ease-in-out; 
-    z-index: 100;
+    z-index: 1000;
+    transform: translateX(-100%); /* Mặc định giấu đi */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.1);
 }
+#sidebar.open { transform: translateX(0); } /* Hiện menu */
 
-/* Khi ẩn: triệt tiêu hoàn toàn kích thước để Main lấp đầy */
-#sidebar.hidden { 
-    width: 0; 
-    min-width: 0; 
-    opacity: 0; 
-    border: none; 
-    pointer-events: none;
-}
-
-.sidebar-header { padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .chapter-list { flex: 1; overflow-y: auto; padding: 10px; }
 
-/* Main View: Tự động lấp đầy phần còn lại */
-#main-view { 
-    flex: 1; 
-    display: flex; 
-    flex-direction: column; 
-    height: 100vh; 
-    min-width: 0; /* Quan trọng để tránh bị vỡ layout flex */
-}
+/* Main View: Luôn chiếm 100% màn hình */
+#main-view { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
 
 .top-bar { 
     padding: 10px 20px; background: var(--card); border-bottom: 1px solid var(--border); 
     display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
 }
 
-/* Khu vực đọc truyện: Đảm bảo lăn chuột được */
+/* Khu vực đọc lấp đầy trang */
 #content-area { 
-    flex: 1; 
-    overflow-y: auto; /* Cho phép lăn chuột ở đây */
-    padding: 20px; 
-    scroll-behavior: smooth;
+    flex: 1; overflow-y: auto; padding: 40px 20px; 
+    display: flex; justify-content: center; /* Căn giữa khung đọc */
 }
 
 .reader-box { 
-    max-width: 900px; 
-    width: 95%; /* Dùng % để co giãn tốt trên mobile */
-    margin: 0 auto; 
-    background: var(--card); 
-    padding: 40px; 
-    border-radius: 8px; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    width: 100%; max-width: 900px; /* Tối đa 900px để không bị quá dài khó đọc */
+    background: var(--card); padding: 40px; border-radius: 12px;
 }
 
 pre { 
-    white-space: pre-wrap; 
-    font-family: 'Times New Roman', serif; 
-    font-size: 20px; 
-    line-height: 1.8; 
-    margin: 0; 
-    word-wrap: break-word; 
+    white-space: pre-wrap; word-wrap: break-word; 
+    font-family: 'Times New Roman', serif; font-size: 21px; line-height: 1.8; margin: 0; 
 }
 
-/* Nút bấm */
-button { padding: 8px 15px; border-radius: 5px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; transition: 0.2s; }
-button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
-button:disabled { opacity: 0.3; }
+/* Lớp phủ mờ lấp đầy xung quanh khi mở menu */
+#overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 999;
+}
+#overlay.show { display: block; }
 
-#overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
-
-/* Responsive cho Mobile */
+/* Responsive cho điện thoại */
 @media (max-width: 768px) {
-    #sidebar { position: fixed; left: 0; top: 0; height: 100%; width: 80%; transform: translateX(-100%); }
-    #sidebar.mobile-open { transform: translateX(0); }
-    #sidebar.hidden { width: 80%; } /* Reset lại logic của desktop */
-    #overlay.show { display: block; }
-    .reader-box { padding: 20px; width: 100%; }
-    pre { font-size: 18px; }
+    #content-area { padding: 15px 10px; }
+    .reader-box { padding: 20px; border-radius: 0; }
+    pre { font-size: 19px; }
+    .top-bar { padding: 10px; }
 }
+
+button { cursor: pointer; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.chapter-link { display: block; padding: 12px; cursor: pointer; border-radius: 8px; font-size: 15px; margin-bottom: 4px; }
+.chapter-link.active { background: var(--primary); color: white; }

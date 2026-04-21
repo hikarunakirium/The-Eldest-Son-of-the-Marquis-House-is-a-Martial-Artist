@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body data-theme="light">
-    <div id="overlay" onclick="toggleSidebar()"></div>
+    <div id="overlay" onclick="closeAllPanels()"></div>
     
     <aside id="sidebar">
         <div class="sidebar-header">
@@ -17,22 +17,47 @@
         <div id="chapter-list" class="chapter-list"></div>
     </aside>
 
+    <aside id="settings-panel">
+        <div class="sidebar-header">
+            <h3>Cài đặt hiển thị</h3>
+            <button class="icon-btn" onclick="toggleSettings()">✕</button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-group">
+                <label>Phông chữ</label>
+                <select id="fontFamily" onchange="applySettings()">
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                    <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                    <option value="'Palatino Linotype', serif">Palatino</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>Cỡ chữ (<span id="fontSizeVal">21</span>px)</label>
+                <input type="range" id="fontSize" min="14" max="36" value="21" oninput="applySettings()">
+            </div>
+            <div class="setting-group">
+                <label>Khoảng cách dòng (<span id="lineHeightVal">1.8</span>)</label>
+                <input type="range" id="lineHeight" min="1.2" max="2.5" step="0.1" value="1.8" oninput="applySettings()">
+            </div>
+        </div>
+    </aside>
+
     <main id="main-view">
         <div class="top-bar">
-            <button class="menu-btn" onclick="toggleSidebar()">☰ Danh sách chương</button>
+            <button class="menu-btn" onclick="toggleSidebar()">☰ Chương</button>
             <div class="nav-group">
-                <button id="prevBtn" onclick="prevChapter()">←</button>
-                <button id="nextBtn" onclick="nextChapter()">→</button>
+                <button class="icon-btn" onclick="toggleSettings()">⚙️ Tùy chỉnh</button>
+                <button class="theme-btn" onclick="toggleTheme()">🌓</button>
             </div>
-            <button class="theme-btn" onclick="toggleTheme()">🌓 Theme</button>
         </div>
         
         <div id="content-area">
-            <article class="reader-box">
-                <h2 id="chapter-title">Đang tải...</h2>
-                <div id="current-path" style="font-size:11px; opacity:0.5; margin-bottom:15px;"></div>
-                <pre id="viewer"></pre>
-            </article>
+            <div id="reader-container"></div>
+            
+            <div id="loading-spinner" style="display:none; text-align:center; padding: 20px; font-weight:bold; color:var(--primary);">
+                Đang tải chương tiếp theo...
+            </div>
         </div>
     </main>
 

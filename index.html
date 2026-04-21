@@ -2,14 +2,16 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Marquis House Reader</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body data-theme="light">
+    <div id="overlay" onclick="toggleSidebar()"></div>
+    
     <aside id="sidebar">
         <div class="sidebar-header">
-            <h3>Mục lục</h3>
+            <h3 style="margin:0;">Mục lục</h3>
             <button class="icon-btn" onclick="toggleSidebar()">✕</button>
         </div>
         <div id="chapter-list" class="chapter-list">
@@ -23,14 +25,14 @@
                 <button id="prevBtn" onclick="prevChapter()">← Trước</button>
                 <button id="nextBtn" onclick="nextChapter()">Sau →</button>
             </div>
-            <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+            <button class="theme-btn" onclick="toggleTheme()">🌓 Theme</button>
         </div>
         
         <div id="content-area">
             <article class="reader-box">
                 <h2 id="chapter-title">Đang tải...</h2>
-                <div class="meta-info" id="current-path"></div>
-                <hr>
+                <div class="meta-info" id="current-path" style="font-size:12px; color:gray; margin-bottom:10px;"></div>
+                <hr style="border:0; border-top:1px solid var(--border); margin-bottom:20px;">
                 <pre id="viewer"></pre>
             </article>
         </div>

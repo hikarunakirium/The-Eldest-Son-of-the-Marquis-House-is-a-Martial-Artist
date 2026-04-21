@@ -54,7 +54,7 @@ async function loadChapter(idx) {
     
     updateButtons();
 
-    // TUYỆT CHIÊU MOBILE: Tự động đóng menu sau khi chọn chương
+// Sau khi load xong, nếu là mobile thì đóng menu
     if (window.innerWidth <= 768) {
         document.getElementById('sidebar').classList.remove('mobile-open');
         document.getElementById('overlay').classList.remove('show');
@@ -74,11 +74,11 @@ function toggleSidebar() {
     const overlay = document.getElementById('overlay');
     
     if (window.innerWidth <= 768) {
-        // Toggle trên điện thoại
+        // Trên điện thoại: dùng class riêng để trượt Menu
         sidebar.classList.toggle('mobile-open');
         overlay.classList.toggle('show');
     } else {
-        // Toggle trên máy tính
+        // Trên máy tính: dùng class hidden để lấp đầy trang
         sidebar.classList.toggle('hidden'); 
     }
 }

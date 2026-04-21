@@ -39,13 +39,19 @@ async function loadChapter(path) {
     document.querySelectorAll('.chapter-link').forEach(el => el.classList.remove('active'));
     document.getElementById('link-' + path)?.classList.add('active');
 
+// Thay thế đoạn try { ... } trong script.js thành thế này:
     try {
-        const resp = await fetch(encodeURIComponent(path));
+        // Mã hóa đúng chuẩn URL cho từng phần của đường dẫn (giữ nguyên dấu /)
+        const safePath = path.split('/').map(encodeURIComponent).join('/');
+        
+        const resp = await fetch(safePath);
+        if (!resp.ok) throw new Error("File không tồn tại (404)");
+        
         const text = await resp.text();
         document.getElementById('viewer').innerText = text;
         document.getElementById('content-area').scrollTop = 0;
     } catch (e) {
-        document.getElementById('viewer').innerText = "Không thể tải nội dung chương này.";
+        document.getElementById('viewer').innerText = "Không thể tải nội dung chương này: " + e.message;
     }
     updateButtons();
 }

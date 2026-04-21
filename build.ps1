@@ -10,22 +10,24 @@ $LogicalSort = {
 $RawFiles = Get-ChildItem -Path $StoryDirs -Filter "*.txt" -Recurse
 $AllFiles = &$LogicalSort $RawFiles
 
-# Tạo nội dung cho data.js
+# Tạo nội dung cho data.js (Dùng nháy kép để tránh lỗi dấu nháy đơn trong tên file)
 $AllPaths = $AllFiles | ForEach-Object { 
     $p = $_.FullName.Replace((Get-Location).Path, "").TrimStart('\').TrimStart('/') -replace '\\', '/'
-    "'$p'" 
+    "`"$p`"" 
 }
 $JSPaths = "const allChapters = [" + ($AllPaths -join ",") + "];`n"
 
 $JSData = "const sidebarData = [`n"
 foreach ($dir in $StoryDirs) {
     if (Test-Path $dir) {
-        $JSData += "  { type: 'group', name: '$dir' },`n"
+        $JSData += "  { type: `"group`", name: `"$dir`" },`n"
         $Files = Get-ChildItem -Path $dir -Filter "*.txt"
         $Sorted = &$LogicalSort $Files
         foreach ($file in $Sorted) {
             $Rel = ($file.FullName.Replace((Get-Location).Path, "").TrimStart('\').TrimStart('/') -replace '\\', '/')
-            $JSData += "  { type: 'chapter', name: '$($file.BaseName)', path: '$Rel' },`n"
+            # Chống lỗi nếu tên file có chứa dấu nháy kép
+            $SafeName = $file.BaseName -replace '"', '\"'
+            $JSData += "  { type: `"chapter`", name: `"$SafeName`", path: `"$Rel`" },`n"
         }
     }
 }

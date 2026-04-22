@@ -2,7 +2,7 @@ let maxLoadedIndex = -1;
 let isFetching = false;
 let observer;
 let currentReadingIndex = 0; // Theo dõi chương đang hiển thị trên màn hình
-let savedBookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]'); // Mảng chứa các ID đã bookmark
+let savedBookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]'); 
 
 window.onload = () => {
     renderSidebar();
@@ -13,6 +13,7 @@ window.onload = () => {
         document.body.setAttribute('data-theme', 'dark');
     }
 
+    // Tối ưu hóa bộ theo dõi: Chỉ kích hoạt khi chương chiếm 10% màn hình
     observer = new IntersectionObserver(handleIntersection, {
         root: document.getElementById('content-area'),
         rootMargin: '0px',
@@ -21,7 +22,7 @@ window.onload = () => {
 
     document.getElementById('content-area').addEventListener('scroll', checkInfiniteScroll);
 
-    // TỰ ĐỘNG TẢI TIẾN TRÌNH: Kiểm tra xem lần trước đọc đến đâu
+    // TỰ ĐỘNG TẢI TIẾN TRÌNH
     const lastRead = localStorage.getItem('lastRead');
     if (typeof allChapters !== 'undefined' && allChapters.length > 0) {
         if (lastRead !== null && allChapters.length > parseInt(lastRead)) {
@@ -69,12 +70,34 @@ function toggleTheme() {
 }
 
 /* ================= LOGIC ĐỌC TRUYỆN (INFINITE SCROLL & AUTO-SAVE) ================= */
+
+// Hàm gọi khi nhảy chương từ Mục lục
 async function loadChapterStartFresh(idx) {
     if (idx < 0 || idx >= allChapters.length) return;
     closeAllPanels();
-    document.getElementById('reader-container').innerHTML = "";
-    maxLoadedIndex = idx - 1;
-    await fetchAndAppendChapter(idx);
+
+    // FIX LỖI BOOKMARK: Ép cập nhật chương hiện tại ngay lập tức!
+    currentReadingIndex = parseInt(idx);
+    localStorage.setItem('lastRead', currentReadingIndex);
+
+    // Xóa màu active cũ và gán màu active mới ngay trên Sidebar
+    document.querySelectorAll('.chapter-link').forEach(el => el.classList.remove('active'));
+    document.getElementById('link-idx-' + currentReadingIndex)?.classList.add('active');
+    document.getElementById('bm-link-idx-' + currentReadingIndex)?.classList.add('active');
+
+    const container = document.getElementById('reader-container');
+    
+    // FIX LỖI OBSERVER: Ngắt theo dõi các chương cũ trước khi dọn dẹp DOM
+    Array.from(container.children).forEach(box => observer.unobserve(box));
+    
+    container.innerHTML = ""; // Dọn sạch nội dung
+    maxLoadedIndex = currentReadingIndex - 1; // Cài lại mốc tải
+
+    // Cuộn trang lên sát viền trên cùng
+    document.getElementById('content-area').scrollTop = 0;
+
+    // Tải chương mới
+    await fetchAndAppendChapter(currentReadingIndex);
 }
 
 async function fetchAndAppendChapter(idx) {
@@ -92,18 +115,23 @@ async function fetchAndAppendChapter(idx) {
         box.className = 'chapter-box';
         box.setAttribute('data-idx', idx);
         box.innerHTML = `<h2>${title}</h2><pre class="chapter-content">${text}</pre>`;
+        
         document.getElementById('reader-container').appendChild(box);
+        
+        // Bắt đầu theo dõi khung chương mới thêm vào
         observer.observe(box);
         maxLoadedIndex = idx;
     } catch (e) {
         console.error("Lỗi khi load chương:", e);
     }
+    
     document.getElementById('loading-spinner').style.display = 'none';
     isFetching = false;
 }
 
 function checkInfiniteScroll() {
     const area = document.getElementById('content-area');
+    // Khi cuộn còn cách đáy 800px thì tự động tải thêm
     if (area.scrollHeight - area.scrollTop - area.clientHeight < 800) {
         if (!isFetching && maxLoadedIndex < allChapters.length - 1) {
             fetchAndAppendChapter(maxLoadedIndex + 1);
@@ -111,19 +139,18 @@ function checkInfiniteScroll() {
     }
 }
 
-// Cập nhật vị trí đang đọc và TỰ ĐỘNG LƯU
 function handleIntersection(entries) {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             const visibleIdx = parseInt(entry.target.getAttribute('data-idx'));
             currentReadingIndex = visibleIdx;
             
-            // AUTO-SAVE: Lưu chương đang đọc vào LocalStorage
+            // AUTO-SAVE khi cuộn
             localStorage.setItem('lastRead', visibleIdx); 
 
             document.querySelectorAll('.chapter-link').forEach(el => el.classList.remove('active'));
             document.getElementById('link-idx-' + visibleIdx)?.classList.add('active');
-            document.getElementById('bm-link-idx-' + visibleIdx)?.classList.add('active'); // Active cho cả nhánh Bookmark
+            document.getElementById('bm-link-idx-' + visibleIdx)?.classList.add('active'); 
         }
     });
 }
@@ -134,14 +161,17 @@ function addBookmark() {
         savedBookmarks.push(currentReadingIndex);
         localStorage.setItem('bookmarks', JSON.stringify(savedBookmarks));
         renderBookmarks();
-        alert("🔖 Đã thêm chương hiện tại vào Bookmark!");
+        
+        // Lấy tên file để hiện thông báo cho rõ ràng
+        const title = allChapters[currentReadingIndex].split('/').pop().replace('.txt', '');
+        alert(`🔖 Đã lưu thành công:\n${title}`);
     } else {
         alert("Chương này đã có trong Bookmark rồi.");
     }
 }
 
 function removeBookmark(event, idx) {
-    event.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+    event.stopPropagation();
     savedBookmarks = savedBookmarks.filter(id => id !== idx);
     localStorage.setItem('bookmarks', JSON.stringify(savedBookmarks));
     renderBookmarks();
